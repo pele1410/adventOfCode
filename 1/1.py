@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+# pylint: disable=line-too-long
 """
 Advent of Code
 Day 1
@@ -26,20 +27,21 @@ In the example above, the top three Elves are the fourth Elf (with 24000 Calorie
 Find the top three Elves carrying the most Calories. How many Calories are those Elves carrying in total?
 
 """
+# pylint: enable=line-too-long
 
 import os.path
 from collections import defaultdict
 
 
 def read_calories():
-    CALORIE_FILE = "calories.txt"
+    calorie_file = "calories.txt"
 
-    if not os.path.isfile(CALORIE_FILE):
-        print('File does not exist:', CALORIE_FILE)
+    if not os.path.isfile(calorie_file):
+        print("File does not exist:", calorie_file)
         return {}
-    else:
-        with open(CALORIE_FILE) as f:
-            lines = f.read().splitlines()
+
+    with open(calorie_file, "rt", 1, "ascii") as file:
+        lines = file.read().splitlines()
 
     return lines
 
@@ -49,16 +51,16 @@ def def_value():
 
 
 def split_calories_by_elf(calories_):
-    d = defaultdict(def_value)
+    elf_dict = defaultdict(def_value)
     elf_count = 0
 
     for calories in calories_:
         if len(calories) > 0:
-            d[elf_count] += int(calories)
+            elf_dict[elf_count] += int(calories)
         else:
             elf_count += 1
 
-    return d
+    return elf_dict
 
 
 def sort_calories(dict_):
@@ -81,8 +83,8 @@ def sum_largest(dict_):
 
 
 def main():
-    c = read_calories()
-    calories_by_elf = split_calories_by_elf(c)
+    calories = read_calories()
+    calories_by_elf = split_calories_by_elf(calories)
     sorted_calories = sort_calories(calories_by_elf)
     largest_elves = find_largest(sorted_calories, 3)
     print(largest_elves)

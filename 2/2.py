@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+# pylint: disable=line-too-long
 """
 Advent of Code
 Day 2
@@ -39,22 +40,22 @@ In the third round, you will defeat your opponent's Scissors with Rock for a sco
 Now that you're correctly decrypting the ultra top secret strategy guide, you would get a total score of 12.
 
 """
+# pylint: enable=line-too-long
 
 
 import os.path
-from collections import defaultdict
 
 
 def read_rounds():
-    # ROUND_FILE = "guide.txt"
-    ROUND_FILE = "input.txt"
+    # round_file = "guide.txt"
+    round_file = "input.txt"
 
-    if not os.path.isfile(ROUND_FILE):
-        print('File does not exist:', ROUND_FILE)
+    if not os.path.isfile(round_file):
+        print("File does not exist:", round_file)
         return {}
 
-    with open(ROUND_FILE) as f:
-        lines = f.read().splitlines()
+    with open(round_file, "rt", 1, "ascii") as file:
+        lines = file.read().splitlines()
 
     return lines
 
@@ -77,8 +78,8 @@ SCORE_LOSS = 0
 
 def total_score_part_1(rounds_):
     total_score = 0
-    for round in rounds_:
-        opponent_shape, my_shape = round.split()
+    for i in rounds_:
+        opponent_shape, my_shape = i.split()
         my_base_shape = to_base_shape(my_shape)
 
         round_score = shape_to_score(to_base_shape(my_shape))
@@ -105,8 +106,8 @@ def total_score_part_1(rounds_):
 
 def total_score_part_2(rounds_):
     total_score = 0
-    for round in rounds_:
-        opponent_shape, result = round.split()
+    for i in rounds_:
+        opponent_shape, result = i.split()
 
         if result == "X":
             round_score = ((shape_to_score(opponent_shape)-2)) % 3 + 1

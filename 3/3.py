@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+# pylint: disable=line-too-long
 """
 Advent of Code
 Day 3
@@ -61,17 +62,18 @@ Priorities for these items must still be found to organize the sticker attachmen
 Find the item type that corresponds to the badges of each three-Elf group. What is the sum of the priorities of those item types?
 
 """
+# pylint: enable=line-too-long
 
 import os.path
 
 
 def read_input(file_):
     if not os.path.isfile(file_):
-        print('File does not exist:', file_)
+        print("File does not exist:", file_)
         return {}
 
-    with open(file_) as f:
-        lines = f.read().splitlines()
+    with open(file_, "rt", 1, "ascii") as file:
+        lines = file.read().splitlines()
 
     return lines
 
@@ -95,12 +97,12 @@ def split_line_into_compartments(line_):
 
 
 def compartment_intersection(compartments_):
-    assert (len(compartments_) == 2)
+    assert len(compartments_) == 2
     return set(compartments_[0]) & set(compartments_[1])
 
 
 def rucksack_intersection(rucksacks_):
-    assert (len(rucksacks_) == 3)
+    assert len(rucksacks_) == 3
     return set(rucksacks_[0]) & set(rucksacks_[1]) & set(rucksacks_[2])
 
 
@@ -119,8 +121,8 @@ def total_score_part_1(lines_):
 def total_score_part_2(lines_):
     total_score = 0
 
-    for x in range(2, len(lines_), 3):
-        common = rucksack_intersection(lines_[x-2:x+1])
+    for i in range(2, len(lines_), 3):
+        common = rucksack_intersection(lines_[i-2:i+1])
         for letter in common:
             total_score += letter_to_score(letter)
     return total_score

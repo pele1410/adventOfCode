@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+# pylint: disable=line-too-long
 """
 Advent of Code
 Day 4
@@ -58,17 +59,18 @@ So, in this example, the number of overlapping assignment pairs is 4.
 In how many assignment pairs do the ranges overlap?
 
 """
+# pylint: enable=line-too-long
 
 import os.path
 
 
 def read_input(file_):
     if not os.path.isfile(file_):
-        print('File does not exist:', file_)
+        print("File does not exist:", file_)
         return {}
 
-    with open(file_) as f:
-        lines = f.read().splitlines()
+    with open(file_, "rt", 1, "ascii") as file:
+        lines = file.read().splitlines()
 
     return lines
 
@@ -79,7 +81,7 @@ def split_lines_by_elf(line_):
 
 def split_elf_by_section(sections_):
     sections = sections_.split("-")
-    assert (len(sections) == 2)
+    assert len(sections) == 2
     return range(int(sections[0]), int(sections[1])+1)
 
 
