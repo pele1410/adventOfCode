@@ -1,8 +1,11 @@
-# Advent of Code 2022
+# Advent of Code
 
 Repository for daily challenges from https://adventofcode.com/
 
-Using this as an opportunity to learn Python
+| Year | Purpose |
+|:--|:--|
+| [2022](2022/) | Using this as an opportunity to learn Python |
+
 
 <!--- advent_readme_stars table --->
 ## 2022 Results
