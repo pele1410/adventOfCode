@@ -16,7 +16,6 @@ Repository for daily challenges from https://adventofcode.com/
 | [Day 1](https://adventofcode.com/2023/day/1) | ⭐ | ⭐ |
 <!--- advent_readme_stars table --->
 
-<!--- advent_readme_stars table --->
 ## 2022 Results
 
 | Day | Part 1 | Part 2 |
@@ -27,4 +26,3 @@ Repository for daily challenges from https://adventofcode.com/
 | [Day 4](https://adventofcode.com/2022/day/4) | ⭐ | ⭐ |
 | [Day 5](https://adventofcode.com/2022/day/5) | ⭐ | ⭐ |
 | [Day 6](https://adventofcode.com/2022/day/6) | ⭐ | ⭐ |
-<!--- advent_readme_stars table --->
