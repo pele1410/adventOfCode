@@ -5,7 +5,16 @@ Repository for daily challenges from https://adventofcode.com/
 | Year | Purpose |
 |:--|:--|
 | [2022](2022/) | Using this as an opportunity to learn Python |
+| [2023](2023/) | Just C++ |
 
+
+<!--- advent_readme_stars table --->
+## 2023 Results
+
+| Day | Part 1 | Part 2 |
+| :---: | :---: | :---: |
+| [Day 1](https://adventofcode.com/2023/day/1) | ⭐ | ⭐ |
+<!--- advent_readme_stars table --->
 
 <!--- advent_readme_stars table --->
 ## 2022 Results
