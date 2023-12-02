@@ -1,4 +1,5 @@
 #include <iostream>
+#include <unordered_map>
 
 #include <QFile>
 #include <QFileInfo>
@@ -10,24 +11,67 @@ enum errors_t
         MISSING_ARGS = 0,
         FAILED_TO_OPEN = 1,
 };
+
+std::vector<std::pair<QString, int>> const STRING_NUMBERS = {{"one", 1},
+                                                             {"two", 2},
+                                                             {"three", 3},
+                                                             {"four", 4},
+                                                             {"five", 5},
+                                                             {"six", 6},
+                                                             {"seven", 7},
+                                                             {"eight", 8},
+                                                             {"nine", 9}};
+
 }
 
 int findFirstNumber (QString line_)
 {
-        auto const index = line_.indexOf (QRegExp ("\\d"));
-        if (index < 0)
-                return -1;
+        int smallestIndex = std::numeric_limits<int>::max ();
+        int value;
 
-        return QString (line_.at (index)).toInt ();
+        auto index = line_.indexOf (QRegExp ("\\d"));
+        if (index >= 0 && index < smallestIndex)
+        {
+                smallestIndex = index;
+                value = QString (line_.at (index)).toInt ();
+        }
+
+        for (auto const &p : STRING_NUMBERS)
+        {
+                index = line_.indexOf (p.first);
+                if (index >= 0 && index < smallestIndex)
+                {
+                        smallestIndex = index;
+                        value = p.second;
+                }
+        }
+
+        return value;
 }
 
 int findLastNumber (QString line_)
 {
-        auto const index = line_.lastIndexOf (QRegExp ("\\d"));
-        if (index < 0)
-                return -1;
+        int largestIndex = -std::numeric_limits<int>::max ();
+        int value;
 
-        return QString (line_.at (index)).toInt ();
+        auto index = line_.lastIndexOf (QRegExp ("\\d"));
+        if (index >= 0 && index > largestIndex)
+        {
+                largestIndex = index;
+                value = QString (line_.at (index)).toInt ();
+        }
+
+        for (auto const &p : STRING_NUMBERS)
+        {
+                index = line_.lastIndexOf (p.first);
+                if (index >= 0 && index > largestIndex)
+                {
+                        largestIndex = index;
+                        value = p.second;
+                }
+        }
+
+        return value;
 }
 
 int main (int argc_, char **argv_)
