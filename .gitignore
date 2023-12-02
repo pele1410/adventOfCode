@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+.vscode/
+Makefile
+2023/2023
