@@ -16,6 +16,13 @@ constexpr int MAX_RED = 12;
 constexpr int MAX_GREEN = 13;
 constexpr int MAX_BLUE = 14;
 
+QString const RED_STRING ("red");
+QString const GREEN_STRING ("green");
+QString const BLUE_STRING ("blue");
+
+QRegExp const GAME_NUMBER ("Game (\\d+):");
+QRegExp const CAST_NUMBER ("(\\d+) (\\D+)");
+
 }
 
 int main (int argc_, char **argv_)
@@ -41,48 +48,37 @@ int main (int argc_, char **argv_)
                 QString line = f.readLine ();
                 line.chop (1);
 
-                QRegExp gameNumber ("Game (\\d+):");
-                QRegExp castNumber ("(\\d+) (\\D+)");
-
-                if (!line.contains (gameNumber))
+                if (!line.contains (GAME_NUMBER))
                 {
                         qWarning ("Line does not contain game:\n\t'%s'", qPrintable (line));
                         continue;
                 }
 
-                line.remove (0, gameNumber.capturedTexts ().at (0).length ());
-                bool badLine = false;
+                line.remove (0, GAME_NUMBER.capturedTexts ().at (0).length ());
+
+                std::unordered_map<QString, int> maxes = {
+                        {RED_STRING, -std::numeric_limits<int>::max ()},
+                        {GREEN_STRING, -std::numeric_limits<int>::max ()},
+                        {BLUE_STRING, -std::numeric_limits<int>::max ()},
+                };
+
+                auto const updateMax = [&maxes] (int value_, QString color_) {
+                        color_.remove (QRegExp ("\\W"));
+                        maxes[color_] = value_ > maxes[color_] ? value_ : maxes[color_];
+                };
+
                 while (true)
                 {
-                        qInfo ("Testing line %s", qPrintable (line));
-                        int const pos = castNumber.indexIn (line);
+                        int const pos = CAST_NUMBER.indexIn (line);
                         if (pos < 0)
                                 break;
 
-                        auto const value = castNumber.cap (1).toInt ();
-                        auto const color = castNumber.cap (2);
+                        updateMax (CAST_NUMBER.cap (1).toInt (), CAST_NUMBER.cap (2));
 
-                        if (color.contains ("red") && value > MAX_RED)
-                        {
-                                badLine = true;
-                                break;
-                        }
-                        else if (color.contains ("blue") && value > MAX_BLUE)
-                        {
-                                badLine = true;
-                                break;
-                        }
-                        else if (color.contains ("green") && value > MAX_GREEN)
-                        {
-                                badLine = true;
-                                break;
-                        }
-
-                        line.remove (0, castNumber.capturedTexts ().at (0).length ());
+                        line.remove (0, CAST_NUMBER.capturedTexts ().at (0).length ());
                 }
 
-                if (!badLine)
-                        sum += gameNumber.cap (1).toInt ();
+                sum += maxes[RED_STRING] * maxes[GREEN_STRING] * maxes[BLUE_STRING];
         }
 
         qInfo ("Sum: %d", sum);
