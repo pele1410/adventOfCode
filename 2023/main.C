@@ -12,66 +12,17 @@ enum errors_t
         FAILED_TO_OPEN = 1,
 };
 
-std::vector<std::pair<QString, int>> const STRING_NUMBERS = {{"one", 1},
-                                                             {"two", 2},
-                                                             {"three", 3},
-                                                             {"four", 4},
-                                                             {"five", 5},
-                                                             {"six", 6},
-                                                             {"seven", 7},
-                                                             {"eight", 8},
-                                                             {"nine", 9}};
+constexpr int MAX_RED = 12;
+constexpr int MAX_GREEN = 13;
+constexpr int MAX_BLUE = 14;
 
-}
+QString const RED_STRING ("red");
+QString const GREEN_STRING ("green");
+QString const BLUE_STRING ("blue");
 
-int findFirstNumber (QString line_)
-{
-        int smallestIndex = std::numeric_limits<int>::max ();
-        int value;
+QRegExp const GAME_NUMBER ("Game (\\d+):");
+QRegExp const CAST_NUMBER ("(\\d+) (\\D+)");
 
-        auto index = line_.indexOf (QRegExp ("\\d"));
-        if (index >= 0 && index < smallestIndex)
-        {
-                smallestIndex = index;
-                value = QString (line_.at (index)).toInt ();
-        }
-
-        for (auto const &p : STRING_NUMBERS)
-        {
-                index = line_.indexOf (p.first);
-                if (index >= 0 && index < smallestIndex)
-                {
-                        smallestIndex = index;
-                        value = p.second;
-                }
-        }
-
-        return value;
-}
-
-int findLastNumber (QString line_)
-{
-        int largestIndex = -std::numeric_limits<int>::max ();
-        int value;
-
-        auto index = line_.lastIndexOf (QRegExp ("\\d"));
-        if (index >= 0 && index > largestIndex)
-        {
-                largestIndex = index;
-                value = QString (line_.at (index)).toInt ();
-        }
-
-        for (auto const &p : STRING_NUMBERS)
-        {
-                index = line_.lastIndexOf (p.first);
-                if (index >= 0 && index > largestIndex)
-                {
-                        largestIndex = index;
-                        value = p.second;
-                }
-        }
-
-        return value;
 }
 
 int main (int argc_, char **argv_)
@@ -92,28 +43,45 @@ int main (int argc_, char **argv_)
         }
 
         int sum = 0;
-
         while (!f.atEnd ())
         {
                 QString line = f.readLine ();
                 line.chop (1);
 
-                auto firstNum = findFirstNumber (line);
-                auto lastNum = findLastNumber (line);
-
-                if (firstNum < 0 || lastNum < 0)
+                if (!line.contains (GAME_NUMBER))
                 {
-                        qWarning ("Line does not contain numbers:\n\t'%s'", qPrintable (line));
+                        qWarning ("Line does not contain game:\n\t'%s'", qPrintable (line));
                         continue;
                 }
 
-                auto lineNumber = QString ("%1%2").arg (firstNum).arg (lastNum).toInt ();
+                line.remove (0, GAME_NUMBER.capturedTexts ().at (0).length ());
 
-                qInfo ("Value of line '%s': %d", qPrintable (line), lineNumber);
-                sum += lineNumber;
+                std::unordered_map<QString, int> maxes = {
+                        {RED_STRING, -std::numeric_limits<int>::max ()},
+                        {GREEN_STRING, -std::numeric_limits<int>::max ()},
+                        {BLUE_STRING, -std::numeric_limits<int>::max ()},
+                };
+
+                auto const updateMax = [&maxes] (int value_, QString color_) {
+                        color_.remove (QRegExp ("\\W"));
+                        maxes[color_] = value_ > maxes[color_] ? value_ : maxes[color_];
+                };
+
+                while (true)
+                {
+                        int const pos = CAST_NUMBER.indexIn (line);
+                        if (pos < 0)
+                                break;
+
+                        updateMax (CAST_NUMBER.cap (1).toInt (), CAST_NUMBER.cap (2));
+
+                        line.remove (0, CAST_NUMBER.capturedTexts ().at (0).length ());
+                }
+
+                sum += maxes[RED_STRING] * maxes[GREEN_STRING] * maxes[BLUE_STRING];
         }
 
-        qInfo ("Total Sum: %d", sum);
+        qInfo ("Sum: %d", sum);
 
         return 0;
 }
