@@ -1,87 +1,177 @@
 #include <iostream>
-#include <unordered_map>
+#include <map>
+#include <vector>
 
 #include <QFile>
 #include <QFileInfo>
+#include <QString>
 
 namespace
 {
-enum errors_t
-{
-        MISSING_ARGS = 0,
-        FAILED_TO_OPEN = 1,
-};
+        enum errors_t
+        {
+                MISSING_ARGS = 0,
+                FAILED_TO_OPEN = 1,
+        };
 
-constexpr int MAX_RED = 12;
-constexpr int MAX_GREEN = 13;
-constexpr int MAX_BLUE = 14;
+        using lineNumber_t = int;
+        using startIndex_t = int;
 
-QString const RED_STRING ("red");
-QString const GREEN_STRING ("green");
-QString const BLUE_STRING ("blue");
+        struct potentialPart_t
+        {
+                startIndex_t startIndex;
+                startIndex_t endIndex;
+                QString partNumber;
+        };
 
-QRegExp const GAME_NUMBER ("Game (\\d+):");
-QRegExp const CAST_NUMBER ("(\\d+) (\\D+)");
+        using potentialPartList_t = std::vector<potentialPart_t>;
+
+        QRegExp const PART_NUMBER("(\\d+)");
+        QRegExp const SYMBOL("([^\\.\\d])");
 
 }
 
-int main (int argc_, char **argv_)
+int main(int argc_, char **argv_)
 {
         if (argc_ < 2)
         {
-                qCritical ("Missing input file argument");
+                qCritical("Missing input file argument");
                 return errors_t::MISSING_ARGS;
         }
 
-        QFileInfo fi (argv_[1]);
-        QFile f (fi.absoluteFilePath ());
+        QFileInfo fi(argv_[1]);
+        QFile f(fi.absoluteFilePath());
 
-        if (!f.open (QIODevice::ReadOnly))
+        if (!f.open(QIODevice::ReadOnly))
         {
-                qWarning ("Failed to open file '%s'", qPrintable (fi.absoluteFilePath ()));
+                qWarning("Failed to open file '%s'", qPrintable(fi.absoluteFilePath()));
                 return errors_t::FAILED_TO_OPEN;
         }
 
         int sum = 0;
-        while (!f.atEnd ())
+        lineNumber_t currentLineNumber = -1;
+
+        std::map<lineNumber_t, potentialPartList_t> potentialParts;
+        std::map<lineNumber_t, std::vector<startIndex_t>> symbols;
+
+        while (!f.atEnd())
         {
-                QString line = f.readLine ();
-                line.chop (1);
+                QString line = f.readLine();
+                line.chop(1);
 
-                if (!line.contains (GAME_NUMBER))
+                qInfo("Line %s", qPrintable(line));
+
+                ++currentLineNumber;
+
+                auto symbolLine = line;
+                auto partLine = line;
+
+                auto const isPart = [&sum](potentialPart_t const &p_, startIndex_t symbol_) -> bool
                 {
-                        qWarning ("Line does not contain game:\n\t'%s'", qPrintable (line));
-                        continue;
-                }
+                        qDebug("Comparing symbol_ %d to start/end %d/%d", symbol_, p_.startIndex, p_.endIndex);
+                        if (symbol_ >= p_.startIndex && symbol_ <= p_.endIndex)
+                        {
+                                qInfo("Found a part %s", (qPrintable(p_.partNumber)));
+                                sum += p_.partNumber.toInt();
+                                return true;
+                        }
 
-                line.remove (0, GAME_NUMBER.capturedTexts ().at (0).length ());
-
-                std::unordered_map<QString, int> maxes = {
-                        {RED_STRING, -std::numeric_limits<int>::max ()},
-                        {GREEN_STRING, -std::numeric_limits<int>::max ()},
-                        {BLUE_STRING, -std::numeric_limits<int>::max ()},
+                        return false;
                 };
 
-                auto const updateMax = [&maxes] (int value_, QString color_) {
-                        color_.remove (QRegExp ("\\W"));
-                        maxes[color_] = value_ > maxes[color_] ? value_ : maxes[color_];
+                auto const matchPartAgainstSymbols = [&isPart](potentialPart_t const &p_, std::vector<startIndex_t> const &symbols_) -> bool
+                {
+                        for (int i = 0; i < symbols_.size(); ++i)
+                        {
+                                if (isPart(p_, symbols_[i]))
+                                {
+                                        return true;
+                                }
+                        }
+
+                        return false;
                 };
 
+                auto const matchSymbolAgainstParts = [&isPart](potentialPartList_t &parts_, startIndex_t symbol_)
+                {
+                        auto iter = parts_.begin();
+                        while (iter != parts_.end())
+                        {
+                                if (isPart(*iter, symbol_))
+                                {
+                                        iter = parts_.erase(iter);
+                                }
+                                else
+                                {
+                                        ++iter;
+                                }
+                        }
+                };
+
+                // Find all symbols first
+                startIndex_t lineOffset = 0;
                 while (true)
                 {
-                        int const pos = CAST_NUMBER.indexIn (line);
+                        int const pos = SYMBOL.indexIn(symbolLine);
                         if (pos < 0)
                                 break;
 
-                        updateMax (CAST_NUMBER.cap (1).toInt (), CAST_NUMBER.cap (2));
+                        auto const actualPos = pos + lineOffset;
 
-                        line.remove (0, CAST_NUMBER.capturedTexts ().at (0).length ());
+                        symbols[currentLineNumber].push_back(actualPos);
+                        symbolLine.remove(pos, SYMBOL.capturedTexts().at(0).length());
+
+                        lineOffset += SYMBOL.capturedTexts().at(0).length();
+
+                        // Check part against previous line
+                        if (currentLineNumber > 0)
+                        {
+                                matchSymbolAgainstParts(potentialParts[currentLineNumber - 1], actualPos);
+                        }
+
+                        // Check part against current line
+                        matchSymbolAgainstParts(potentialParts[currentLineNumber], actualPos);
                 }
 
-                sum += maxes[RED_STRING] * maxes[GREEN_STRING] * maxes[BLUE_STRING];
-        }
+                // Then find all part numbers
+                lineOffset = 0;
+                while (true)
+                {
+                        int const pos = PART_NUMBER.indexIn(partLine);
+                        if (pos < 0)
+                                break;
 
-        qInfo ("Sum: %d", sum);
+                        partLine.remove(pos, PART_NUMBER.capturedTexts().at(0).length());
+
+                        potentialPart_t p;
+                        // Start index is actually -1 to account for diagnol
+                        p.startIndex = pos - 1 + lineOffset;
+                        // Start index is actually +1 to account for diagnol
+                        p.endIndex = p.startIndex + 1 + PART_NUMBER.capturedTexts().at(0).length();
+                        p.partNumber = PART_NUMBER.cap(1);
+
+                        lineOffset += PART_NUMBER.capturedTexts().at(0).length();
+
+                        bool found = false;
+                        // Check part against previous line
+                        if (currentLineNumber > 0 && matchPartAgainstSymbols(p, symbols[currentLineNumber - 1]))
+                        {
+                                found = true;
+                        }
+
+                        // Check part against current line
+                        if (matchPartAgainstSymbols(p, symbols[currentLineNumber]))
+                        {
+                                found = true;
+                        }
+
+                        if (!found)
+                        {
+                                potentialParts[currentLineNumber].push_back(p);
+                        }
+                }
+        }
+        qInfo("Sum: %d", sum);
 
         return 0;
 }
