@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#include <set>
 #include <vector>
 
 #include <QFile>
@@ -27,7 +28,7 @@ namespace
         using potentialPartList_t = std::vector<potentialPart_t>;
 
         QRegExp const PART_NUMBER("(\\d+)");
-        QRegExp const SYMBOL("([^\\.\\d])");
+        QRegExp const SYMBOL("(\\*)");
 
 }
 
@@ -48,7 +49,6 @@ int main(int argc_, char **argv_)
                 return errors_t::FAILED_TO_OPEN;
         }
 
-        int sum = 0;
         lineNumber_t currentLineNumber = -1;
 
         std::map<lineNumber_t, potentialPartList_t> potentialParts;
@@ -63,111 +63,110 @@ int main(int argc_, char **argv_)
 
                 ++currentLineNumber;
 
-                auto symbolLine = line;
-                auto partLine = line;
-
-                auto const isPart = [&sum](potentialPart_t const &p_, startIndex_t symbol_) -> bool
-                {
-                        qDebug("Comparing symbol_ %d to start/end %d/%d", symbol_, p_.startIndex, p_.endIndex);
-                        if (symbol_ >= p_.startIndex && symbol_ <= p_.endIndex)
-                        {
-                                qInfo("Found a part %s", (qPrintable(p_.partNumber)));
-                                sum += p_.partNumber.toInt();
-                                return true;
-                        }
-
-                        return false;
-                };
-
-                auto const matchPartAgainstSymbols = [&isPart](potentialPart_t const &p_, std::vector<startIndex_t> const &symbols_) -> bool
-                {
-                        for (int i = 0; i < symbols_.size(); ++i)
-                        {
-                                if (isPart(p_, symbols_[i]))
-                                {
-                                        return true;
-                                }
-                        }
-
-                        return false;
-                };
-
-                auto const matchSymbolAgainstParts = [&isPart](potentialPartList_t &parts_, startIndex_t symbol_)
-                {
-                        auto iter = parts_.begin();
-                        while (iter != parts_.end())
-                        {
-                                if (isPart(*iter, symbol_))
-                                {
-                                        iter = parts_.erase(iter);
-                                }
-                                else
-                                {
-                                        ++iter;
-                                }
-                        }
-                };
-
                 // Find all symbols first
-                startIndex_t lineOffset = 0;
+                int pos = 0;
                 while (true)
                 {
-                        int const pos = SYMBOL.indexIn(symbolLine);
+                        pos = SYMBOL.indexIn(line, pos);
                         if (pos < 0)
                                 break;
 
-                        auto const actualPos = pos + lineOffset;
-
-                        symbols[currentLineNumber].push_back(actualPos);
-                        symbolLine.remove(pos, SYMBOL.capturedTexts().at(0).length());
-
-                        lineOffset += SYMBOL.capturedTexts().at(0).length();
-
-                        // Check part against previous line
-                        if (currentLineNumber > 0)
-                        {
-                                matchSymbolAgainstParts(potentialParts[currentLineNumber - 1], actualPos);
-                        }
-
-                        // Check part against current line
-                        matchSymbolAgainstParts(potentialParts[currentLineNumber], actualPos);
+                        symbols[currentLineNumber].push_back(pos);
+                        pos += SYMBOL.matchedLength();
                 }
 
                 // Then find all part numbers
-                lineOffset = 0;
+                pos = 0;
                 while (true)
                 {
-                        int const pos = PART_NUMBER.indexIn(partLine);
+                        pos = PART_NUMBER.indexIn(line, pos);
                         if (pos < 0)
                                 break;
 
-                        partLine.remove(pos, PART_NUMBER.capturedTexts().at(0).length());
-
                         potentialPart_t p;
                         // Start index is actually -1 to account for diagnol
-                        p.startIndex = pos - 1 + lineOffset;
+                        p.startIndex = pos - 1;
                         // Start index is actually +1 to account for diagnol
-                        p.endIndex = p.startIndex + 1 + PART_NUMBER.capturedTexts().at(0).length();
+                        p.endIndex = p.startIndex + 1 + PART_NUMBER.matchedLength();
                         p.partNumber = PART_NUMBER.cap(1);
 
-                        lineOffset += PART_NUMBER.capturedTexts().at(0).length();
+                        potentialParts[currentLineNumber].push_back(p);
 
-                        bool found = false;
-                        // Check part against previous line
-                        if (currentLineNumber > 0 && matchPartAgainstSymbols(p, symbols[currentLineNumber - 1]))
+                        pos += PART_NUMBER.matchedLength();
+                }
+        }
+
+        auto const totalLines = currentLineNumber;
+
+        // Then try to match things based on gear symbol only
+        int sum = 0;
+        currentLineNumber = -1;
+
+        auto const isPart = [](potentialPart_t const &p_, startIndex_t symbolPos_) -> int
+        {
+                if (symbolPos_ >= p_.startIndex && symbolPos_ <= p_.endIndex)
+                {
+                        return p_.partNumber.toInt();
+                }
+
+                return 0;
+        };
+
+        auto const checkLine = [&](lineNumber_t lineNumber_, startIndex_t symbolPos_, std::set<int> &maybeParts_)
+        {
+                auto const parts = potentialParts[lineNumber_];
+                for (auto j = 0; j < parts.size(); ++j)
+                {
+                        int const part = isPart(parts[j], symbolPos_);
+                        if (part > 0)
                         {
-                                found = true;
+                                maybeParts_.insert(part);
+                        }
+                }
+        };
+
+        while (currentLineNumber < totalLines)
+        {
+                ++currentLineNumber;
+
+                if (symbols.count(currentLineNumber) <= 0)
+                {
+                        continue;
+                }
+
+                auto lineSymbols = symbols[currentLineNumber];
+
+                for (int i = 0; i < lineSymbols.size(); ++i)
+                {
+
+                        std::set<int> maybeParts;
+                        int const symbolPos = lineSymbols[i];
+
+                        // Check against previous line if there is one
+                        if (currentLineNumber > 0)
+                        {
+                                checkLine(currentLineNumber - 1, symbolPos, maybeParts);
                         }
 
-                        // Check part against current line
-                        if (matchPartAgainstSymbols(p, symbols[currentLineNumber]))
+                        // Check against current line
                         {
-                                found = true;
+                                checkLine(currentLineNumber, symbolPos, maybeParts);
                         }
 
-                        if (!found)
+                        // Check against next line if there is one
+                        if (currentLineNumber < totalLines)
                         {
-                                potentialParts[currentLineNumber].push_back(p);
+                                checkLine(currentLineNumber + 1, symbolPos, maybeParts);
+                        }
+
+                        if (maybeParts.size() == 2)
+                        {
+                                std::string partsString;
+                                for (auto i : maybeParts)
+                                        partsString += "," + std::to_string(i);
+
+                                qInfo("Parts: %s", partsString.c_str());
+                                sum += std::accumulate(maybeParts.begin(), maybeParts.end(), 1, std::multiplies<int>());
                         }
                 }
         }
